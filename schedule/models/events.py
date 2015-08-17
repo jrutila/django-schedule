@@ -208,8 +208,17 @@ class Event(models.Model):
         """
         occ_replacer = OccurrenceReplacer(self.occurrence_set.all())
         generator = self._occurrences_after_generator(after)
+        trickies = list(self.occurrence_set.filter(original_start__lte=after, start__gte=after).order_by('start'))
         while True:
-            next = generator.next()
+            nomore = False
+            try:
+                next = generator.next()
+            except StopIteration:
+                next = None
+            if (len(trickies) > 0 and (next == None or next.start > trickies[0].start)):
+                yield trickies.pop(0)
+            if (next == None):
+                raise StopIteration
             yield occ_replacer.get_occurrence(next)
 
 
